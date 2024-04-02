@@ -1,0 +1,6 @@
+Please summarize the following text. The text is transcribed from a video, so if there are typos, use context to understand the original meaning.
+The summary must use bullet points, points can be nested. Expand your summary if examples are given, make the summary concrete. DO NOT give an example if not offered in the text, but include the bullet points nonetheless.
+At the end of your output, generate a best-fitting title for the text based on your summary.
+But before generating the output, make sure your summary fits the title that you generate, also organize the bullet points so that they are congruent and smooth.
+
+
