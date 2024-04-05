@@ -68,18 +68,11 @@ def get_completion(template_file, transcription_file):
 
     return completion.choices[0].message.content
 
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        usage()
-        sys.exit(1)
 
-    template_file = str(sys.argv[1])
-    transcription = None
-
-    if is_download_audio_remotely and not is_generate_tts_only:
-        audio_path = get_audio_to_path(sys.argv[2])
-        print("[*] Audio saved to: {}, starting transcription...".format(audio_path))
-        arguments = ["whisper", audio_path, "--output_format", "txt", "--output_dir", "./"]
+def get_transcription(audio_file_path):
+    output_transcription_file_name = Path(audio_file_path).stem + ".txt"
+    if default_config.is_use_local_transcription:
+        arguments = ["whisper", audio_file_path, "--output_format", "txt", "--output_dir", "./"]
         print("[*] {}".format(" ".join(arguments)))
         process = Popen(arguments , stdout=PIPE, stderr=STDOUT, shell=False)
         with process.stdout:
@@ -91,17 +84,41 @@ if __name__ == "__main__":
                 print(decoded_line.strip(), flush=True)
         exitcode = process.wait()
         print("[*] Transcription exit status: {}".format(exitcode))
-        transcription_file = Path(audio_path).stem + ".txt"
+    else:
+        print("[*] Getting transcription from remote...")
+        # use remote transcription
+        client = create_client(openai_key)
 
+        audio_file= open(audio_file_path, "rb")
+        transcription = client.audio.transcriptions.create(
+          model="whisper-1",
+          file=audio_file
+        )
+        #print(transcription.text)
+        with open(output_transcription_file_name, "w") as f:
+            f.write(transcription.text)
+            f.close()
+    return output_transcription_file_name
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        usage()
+        sys.exit(1)
+
+    template_file = str(sys.argv[1])
+    transcription = None
+
+    if is_download_audio_remotely and not is_generate_tts_only:
+        audio_path = get_audio_to_path(sys.argv[2])
+        print("[*] Audio saved to: {}, starting transcription...".format(audio_path))
+        transcription_file = get_transcription(audio_path)
     else:
         transcription_file = str(sys.argv[2])
 
     completion_file_name = None
     completion_text = None
     if not is_generate_tts_only:
-
         temp_filename = os.path.basename(transcription_file)
-
         print("[*] Waiting for Completion...")
         completion_text = get_completion(template_file, transcription_file)
         completion_file_name = "./completion_{}_file.txt".format(temp_filename)

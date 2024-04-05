@@ -83,7 +83,7 @@ def probe_id(storage_endpoint, post_id, is_debug):
     else:
         return None
 
-def slugify(value, allow_unicode=True):
+def create_compatible_name(value, allow_unicode=True):
     """
     https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
     Taken from https://github.com/django/django/blob/master/django/utils/text.py
@@ -102,7 +102,8 @@ def slugify(value, allow_unicode=True):
 
 
 def download_and_save(from_link, to_folder="./"):
-    unquoted_from_link = slugify(unquote(from_link).split("/")[-1]) # prevents linux-incompatible names
+    unquoted_from_link = create_compatible_name(unquote(from_link).split("/")[-1]) # prevents linux-incompatible names
+    unquoted_from_link += ".mp3"
     process = Popen(["/usr/bin/curl", "-s", from_link, "-o", unquoted_from_link ])
     exitcode = process.wait()
     if exitcode != 0:
