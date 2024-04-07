@@ -1,0 +1,5 @@
+httpx
+lxml
+openai==1.9.0
+Requests
+tabulate

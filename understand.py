@@ -8,6 +8,7 @@ import os
 from subprocess import Popen, PIPE, STDOUT
 from get_audio import get_audio_to_path
 from configuration import default_config
+from arguments_parsing import get_arguments
 
 proxy = default_config.proxy_url
 
@@ -75,13 +76,14 @@ def get_transcription(audio_file_path):
         arguments = ["whisper", audio_file_path, "--output_format", "txt", "--output_dir", "./"]
         print("[*] {}".format(" ".join(arguments)))
         process = Popen(arguments , stdout=PIPE, stderr=STDOUT, shell=False)
-        with process.stdout:
-            for line in iter(process.stdout.readline, b''): # b'\n'-separated lines
-                try:
-                    decoded_line = line.decode()
-                except:
-                    decoded_line = str(line)
-                print(decoded_line.strip(), flush=True)
+        if default_config.verbose:
+            with process.stdout:
+                for line in iter(process.stdout.readline, b''): # b'\n'-separated lines
+                    try:
+                        decoded_line = line.decode()
+                    except:
+                        decoded_line = str(line)
+                    print(decoded_line.strip(), flush=True)
         exitcode = process.wait()
         print("[*] Transcription exit status: {}".format(exitcode))
     else:
@@ -94,16 +96,15 @@ def get_transcription(audio_file_path):
           model="whisper-1",
           file=audio_file
         )
-        #print(transcription.text)
+        if default_config.verbose:
+            print(transcription.text)
         with open(output_transcription_file_name, "w") as f:
             f.write(transcription.text)
             f.close()
     return output_transcription_file_name
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        usage()
-        sys.exit(1)
+    get_arguments()
 
     template_file = str(sys.argv[1])
     transcription = None
