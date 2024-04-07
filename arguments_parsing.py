@@ -4,7 +4,33 @@ import sys
 import os
 from tabulate import tabulate
 
-def get_arguments():
+class UserArguments:
+    def __init__(self):
+        self.is_full_procedure = True
+        self.start_from_stage = 1
+        self.is_single_command = False
+        self.template = "./template.txt" 
+        self.get_audio_from = "remote" 
+        self.get_transcription_from = "remote"
+        self.get_completion_from = "remote" 
+        self.get_tts_from = "remote" 
+        self.content = None 
+    def show(self):
+        print()
+        print(tabulate(
+                    [[self.is_full_procedure, self.start_from_stage, self.is_single_command, self.template, self.content]],
+                    headers=["full procedure", "from stage", "single command", "template", "content"], tablefmt='grid'
+                    ))
+        print()
+        print(tabulate(
+                    [[ self.get_audio_from, self.get_transcription_from, self.get_completion_from, self.get_tts_from]],
+                    headers=["audio(s1)", "transcription(s2)", "completion(s3)", "TTS(s4)"], tablefmt='grid'
+                    ))
+        print()
+
+user_args = UserArguments()
+
+def init_arguments():
 
     parser = argparse.ArgumentParser(
                         prog='Understand',
@@ -39,6 +65,10 @@ def get_arguments():
 
     args = parser.parse_args()
 
+    if len(sys.argv) <= 1:
+        parser.print_help()
+        sys.exit(1)
+
     get_audio_from="remote"
 
     is_full_procedure = args.full_procedure
@@ -51,12 +81,31 @@ def get_arguments():
     get_tts_from = args.stage4_get_tts
     content = args.content
 
-    print()
-    print(tabulate(
-                [[is_full_procedure, start_from_stage, is_single_command, template, content, get_audio_from, get_transcription_from, get_completion_from, get_tts_from]],
-                headers=["full procedure", "from stage", "single command", "template", "content", "audio(s1)", "transcription(s2)", "completion(s3)", "TTS(s4)"], tablefmt='orgtbl'
-                ))
-    print()
+    user_args.is_full_procedure = is_full_procedure 
+    user_args.start_from_stage = start_from_stage 
+    user_args.is_single_command = is_single_command 
+    user_args.template = template 
+    user_args.get_audio_from = get_audio_from 
+    user_args.get_transcription_from = get_transcription_from 
+    user_args.get_completion_from = get_completion_from 
+    user_args.get_tts_from = get_tts_from 
+    user_args.content = content 
+
+    validate_user_arguments(user_args)
+
+    user_args.show()
+
+def validate_user_arguments(user_args):
+
+    is_full_procedure       = user_args.is_full_procedure 
+    start_from_stage        = user_args.start_from_stage 
+    is_single_command       = user_args.is_single_command 
+    template                = user_args.template 
+    get_audio_from          = user_args.get_audio_from 
+    get_transcription_from  = user_args.get_transcription_from 
+    get_completion_from     = user_args.get_completion_from 
+    get_tts_from            = user_args.get_tts_from 
+    content                 = user_args.content 
 
     # Validate script launch mode
     
@@ -65,7 +114,7 @@ def get_arguments():
         sys.exit(1)
 
     if is_full_procedure and is_single_command:
-        print("[-] The full-procedure and \"single command\" cannot coexist.")
+        print("[-] The \"full-procedure\" mode and \"single command\" mode cannot coexist.")
         sys.exit(1)
 
     # Validate full-procedure mode arguments
@@ -113,5 +162,4 @@ def get_arguments():
                 sys.exit(1)
                 #TODO: check if local TTS model is available
 
-if __name__ == "__main__":
-    get_arguments()
+init_arguments()

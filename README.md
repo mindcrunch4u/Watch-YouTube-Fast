@@ -8,8 +8,8 @@ Set up the environment:
 ```
 python -m venv ./env
 source ./env/bin/activate
-
 ```
+Follow the [instructions here](https://github.com/openai/whisper) to install whisper (for local transcription).
 
 Configure the following fields in `configuration.py`:
 - `site_url`, this is for request headers. The script assumes the `downloader_endpoint` and `storage_endpoint` are using the same FQDN.

@@ -8,7 +8,24 @@ import os
 from subprocess import Popen, PIPE, STDOUT
 from get_audio import get_audio_to_path
 from configuration import default_config
-from arguments_parsing import get_arguments
+from arguments_parsing import user_args
+
+"""
+Description:
+    4 main functions:
+    - get_audio_to_path():
+        input: a YouTube link
+        output: path to the downloaded audio file.
+    - get_transcription():
+        input: path to a mp3 file
+        output: is the path to the transcription file.
+    - get_completion():
+        two inputs: 1) path to the template file, 2) path to the transcription file.
+        output: path to the completion text file.
+    - get_tts():
+        two inputs: 1) a string containing text, 2) TTS output file name, should end in .mp3.
+        output: path to the TTS audio file.
+"""
 
 proxy = default_config.proxy_url
 
@@ -16,9 +33,6 @@ os.environ['http_proxy'] = proxy
 os.environ['HTTP_PROXY'] = proxy
 os.environ['https_proxy'] = proxy
 os.environ['HTTPS_PROXY'] = proxy
-
-is_download_audio_remotely=default_config.is_download_audio_remotely
-is_generate_tts_only = default_config.is_generate_tts_only
 
 def usage():
     print("python3 understand.py <template.txt> <transcription.txt | video link>")
@@ -67,12 +81,19 @@ def get_completion(template_file, transcription_file):
       ]
     )
 
-    return completion.choices[0].message.content
+    temp_filename = os.path.basename(transcription_file)
+    completion_file_name = "./completion_{}_file.txt".format(temp_filename)
+    completion_text = completion.choices[0].message.content
+    with open(completion_file_name, "w") as buffer:
+        buffer.write(completion_text)
+        buffer.close()
+
+    return completion_file_name
 
 
 def get_transcription(audio_file_path):
     output_transcription_file_name = Path(audio_file_path).stem + ".txt"
-    if default_config.is_use_local_transcription:
+    if user_args.get_transcription_from == "local":
         arguments = ["whisper", audio_file_path, "--output_format", "txt", "--output_dir", "./"]
         print("[*] {}".format(" ".join(arguments)))
         process = Popen(arguments , stdout=PIPE, stderr=STDOUT, shell=False)
@@ -87,6 +108,7 @@ def get_transcription(audio_file_path):
         exitcode = process.wait()
         print("[*] Transcription exit status: {}".format(exitcode))
     else:
+        # get transcription from remote
         file_stats = os.stat(audio_file_path)
         audio_file_size_in_mb = file_stats.st_size / (1024 * 1024)
         if audio_file_size_in_mb > 20:
@@ -110,43 +132,97 @@ def get_transcription(audio_file_path):
     return output_transcription_file_name
 
 if __name__ == "__main__":
-    get_arguments()
 
-    template_file = str(sys.argv[1])
-    transcription = None
-
-    if default_config.is_generate_completion_only:
-        transcription_file = str(sys.argv[2])
-    elif is_download_audio_remotely and not is_generate_tts_only:
-        audio_path = get_audio_to_path(sys.argv[2])
+    if (user_args.is_full_procedure or
+        (user_args.start_from_stage == 1 and not user_args.is_single_command)):
+        audio_path = get_audio_to_path(user_args.content)
         print("[*] Audio saved to: {}, starting transcription...".format(audio_path))
-        transcription_file = get_transcription(audio_path)
-    elif not is_download_audio_remotely:
-        # use local audio file
-        audio_path = sys.argv[2]
-        print("[*] Using audio file: {}, starting transcription...".format(audio_path))
-        transcription_file = get_transcription(audio_path)
-    elif is_generate_tts_only:
-        transcription_file = str(sys.argv[2])
 
-    completion_file_name = None
-    completion_text = None
-    if (not is_generate_tts_only) or (default_config.is_generate_completion_only):
-        temp_filename = os.path.basename(transcription_file)
-        print("[*] Waiting for Completion...")
-        completion_text = get_completion(template_file, transcription_file)
-        completion_file_name = "./completion_{}_file.txt".format(temp_filename)
-        with open(completion_file_name, "w") as buffer:
-            buffer.write(completion_text)
-            buffer.close()
+        transcription_file = get_transcription(audio_path)
+        print("[*] Transcription saved to: {}, starting completion...".format(transcription_file))
+
+        completion_file_name = get_completion(user_args.template, transcription_file)
+        completion_text = None
+        print("[*] Completion saved to: {}".format(completion_file_name))
+        with open(completion_file_name, "r") as comp:
+            completion_text = comp.read()
+            comp.close()
+
+        print("[*] Waiting for TTS...")
+        tts_file_name = "./speech_{}_file.mp3".format(os.path.basename(completion_file_name))
+        get_tts(completion_text, tts_file_name)
+        print("[*] TTS saved to: {}".format(tts_file_name))
+
+    elif not user_args.is_single_command:
+        if user_args.start_from_stage == 1:
+            # covered in the "full-procedure" case
+            pass
+        elif user_args.start_from_stage == 2:
+            audio_path = user_args.content
+            print("[*] Using audio file: {}, starting transcription...".format(audio_path))
+            transcription_file = get_transcription(audio_path)
+            print("[*] Transcription saved to: {}.".format(transcription_file))
+
+            completion_file_name = get_completion(user_args.template, transcription_file)
             print("[*] Completion saved to: {}".format(completion_file_name))
-    else:
-        completion_file_name = sys.argv[2]
-        with open(completion_file_name, "r") as completion_file:
-            completion_text = completion_file.read()
 
-    print("[*] Waiting for TTS...")
-    tts_file_name = "./speech_{}_file.mp3".format(os.path.basename(completion_file_name))
-    get_tts(completion_text, tts_file_name)
-    print("[*] TTS saved to: {}".format(tts_file_name))
+            completion_text = None
+            with open(completion_file_name, "r") as comp:
+                completion_text = comp.read()
+                comp.close()
+            print("[*] Waiting for TTS...")
+            tts_file_name = "./speech_{}_file.mp3".format(os.path.basename(completion_file_name))
+            get_tts(completion_text, tts_file_name)
+            print("[*] TTS saved to: {}".format(tts_file_name))
+        elif user_args.start_from_stage == 3:
+            transcription_file = user_args.content
+            print("[*] Using transcription: {}, starting completion...".format(transcription_file))
+            completion_file_name = get_completion(user_args.template, transcription_file)
+            print("[*] Completion saved to: {}".format(completion_file_name))
 
+            completion_text = None
+            with open(completion_file_name, "r") as comp:
+                completion_text = comp.read()
+                comp.close()
+            print("[*] Waiting for TTS...")
+            tts_file_name = "./speech_{}_file.mp3".format(os.path.basename(completion_file_name))
+            get_tts(completion_text, tts_file_name)
+            print("[*] TTS saved to: {}".format(tts_file_name))
+        elif user_args.start_from_stage == 4:
+            completion_file_name = user_args.content
+            print("[*] Using completion: {}, starting TTS...".format(completion_file_name))
+            completion_text = None
+            with open(completion_file_name, "r") as comp:
+                completion_text = comp.read()
+                comp.close()
+            print("[*] Waiting for TTS...")
+            tts_file_name = "./speech_{}_file.mp3".format(os.path.basename(completion_file_name))
+            get_tts(completion_text, tts_file_name)
+            print("[*] TTS saved to: {}".format(tts_file_name))
+
+    else: # single command mode
+        if user_args.start_from_stage == 1:
+            # only download audio
+            audio_path = get_audio_to_path(user_args.content)
+            print("[*] Audio saved to: {}.".format(audio_path))
+        elif user_args.start_from_stage == 2:
+            # only generate transcription
+            audio_path = user_args.content
+            transcription_file = get_transcription(audio_path)
+            print("[*] Transcription saved to: {}.".format(transcription_file))
+        elif user_args.start_from_stage == 3:
+            # only generate completion
+            transcription_file = user_args.content
+            completion_file_name = get_completion(user_args.template, transcription_file)
+            print("[*] Completion saved to: {}".format(completion_file_name))
+        elif user_args.start_from_stage == 4:
+            # only generate TTS
+            completion_file_name = user_args.content
+            completion_text = None
+            with open(completion_file_name, "r") as comp:
+                completion_text = comp.read()
+                comp.close()
+            print("[*] Waiting for TTS...")
+            tts_file_name = "./speech_{}_file.mp3".format(os.path.basename(completion_file_name))
+            get_tts(completion_text, tts_file_name)
+            print("[*] TTS saved to: {}".format(tts_file_name))
