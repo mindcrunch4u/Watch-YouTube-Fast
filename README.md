@@ -2,6 +2,15 @@
 
 ## Usage
 
+### Configuration
+
+Configure the following fields in `configuration.py`:
+-`site_url`, this is for request headers. The script assumes the `downloader_endpoint` and `storage_endpoint` are using the same FQDN.
+-`downloader_endpoint`, set up a remote downloader using the [Web-Box](https://github.com/mindcrunch4u/Web-Box) project. Copy the server's endpoint here.
+-`storage_endpoint`, set up an `autoindex`-like, HTTP-based file server. Copy the server's root endpoint here.
+
+### Trying it out
+
 **Turn a YouTube link into a TTS summary**
 ```
 python understand.py \ 
