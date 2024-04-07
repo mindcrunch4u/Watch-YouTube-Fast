@@ -53,7 +53,7 @@ def return_if_found(request_endpoint, is_debug=False):
             if result.status_code == 200:
                 return result
             else:
-                print(result, "Probing for path: {}...".format(request_endpoint))
+                print("Probing for path: {}...".format(request_endpoint))
         except Exception as e:
             print(e)
             return None

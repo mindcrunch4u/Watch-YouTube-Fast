@@ -25,10 +25,10 @@ def usage():
 
 def create_client(openai_key):
     client = OpenAI(
-        base_url="https://api.xty.app/v1",
+        base_url="https://hk.xty.app/v1",
         api_key=openai_key,
         http_client=httpx.Client(
-            base_url="https://api.xty.app/v1",
+            base_url="https://hk.xty.app/v1",
             follow_redirects=True,
         ),
     )
@@ -87,6 +87,12 @@ def get_transcription(audio_file_path):
         exitcode = process.wait()
         print("[*] Transcription exit status: {}".format(exitcode))
     else:
+        file_stats = os.stat(audio_file_path)
+        audio_file_size_in_mb = file_stats.st_size / (1024 * 1024)
+        if audio_file_size_in_mb > 20:
+            print("[!] Sending a audio file larger than 20MB might fail. Use local transcription instead.")
+            print("[!] Abort.")
+            sys.exit(1)
         print("[*] Getting transcription from remote...")
         # use remote transcription
         client = create_client(openai_key)
@@ -109,16 +115,23 @@ if __name__ == "__main__":
     template_file = str(sys.argv[1])
     transcription = None
 
-    if is_download_audio_remotely and not is_generate_tts_only:
+    if default_config.is_generate_completion_only:
+        transcription_file = str(sys.argv[2])
+    elif is_download_audio_remotely and not is_generate_tts_only:
         audio_path = get_audio_to_path(sys.argv[2])
         print("[*] Audio saved to: {}, starting transcription...".format(audio_path))
         transcription_file = get_transcription(audio_path)
-    else:
+    elif not is_download_audio_remotely:
+        # use local audio file
+        audio_path = sys.argv[2]
+        print("[*] Using audio file: {}, starting transcription...".format(audio_path))
+        transcription_file = get_transcription(audio_path)
+    elif is_generate_tts_only:
         transcription_file = str(sys.argv[2])
 
     completion_file_name = None
     completion_text = None
-    if not is_generate_tts_only:
+    if (not is_generate_tts_only) or (default_config.is_generate_completion_only):
         temp_filename = os.path.basename(transcription_file)
         print("[*] Waiting for Completion...")
         completion_text = get_completion(template_file, transcription_file)
