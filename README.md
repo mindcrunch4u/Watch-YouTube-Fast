@@ -2,6 +2,8 @@
 
 ## Usage
 
+![Demo GIF](https://github.com/mindcrunch4u/Watch-YouTube-Fast/blob/main/about/demo.gif)
+
 ### Configuration
 
 Set up the environment:
