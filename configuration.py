@@ -10,6 +10,9 @@ default_config.downloader_endpoint = "<web-box downloader API>"
 default_config.storage_endpoint = "<nginx autoindex URL>"
 
 default_config.verbose = True
+default_config.no_audio = True
+default_config.support_large_text = False
+default_config.large_file_chunk_size = 2000
 
 import os
 proxy = default_config.proxy_url

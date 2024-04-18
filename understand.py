@@ -10,6 +10,9 @@ from get_audio import get_audio_to_path
 from configuration import default_config
 from arguments_parsing import user_args
 
+if default_config.support_large_text:
+    from largetext import large_text_to_list, default_chunk_size
+
 """
 Description:
     4 main functions:
@@ -43,6 +46,10 @@ def create_client(openai_key):
 
 def get_tts(text, audio_output_path):
 
+    if default_config.no_audio:
+        print("Skip generating TTS.")
+        return
+
     speech_file_path = Path(audio_output_path)
     client = create_client(openai_key)
 
@@ -65,18 +72,48 @@ def get_completion(template_file, transcription_file):
     temp.close()
 
     client = create_client(openai_key)
+    completion_text = None
 
-    completion = client.chat.completions.create(
-      model="gpt-3.5-turbo-0125",
-      messages=[
-        {"role": "system", "content": "You are a helpful assistant. You are good at summarizing transcriptions text from videos. You will help the user to summarize video transcription text."},
-        {"role": "user", "content": "{}".format(template_content + transcription_content)}
-      ]
-    )
+    default_system_prompt = "You are a helpful assistant. You are good at summarizing transcriptions text from videos. You will help the user to summarize video transcription text."
+    default_model = "gpt-3.5-turbo-0125"
+    chunk_index = 0
+
+    if default_config.support_large_text:
+        list_of_texts = large_text_to_list(transcription_content)
+        list_of_completions = []
+        for text_chunk in list_of_texts:
+            print("[*] handling chunk: {}".format(chunk_index))
+            chunk_index += 1
+            completion = client.chat.completions.create(
+              model=default_model,
+              messages=[
+                {"role": "system", "content": default_system_prompt },
+                {"role": "user", "content": "{}".format(template_content + text_chunk)}
+              ]
+            )
+            completion_text = completion.choices[0].message.content
+            list_of_completions.append(completion_text)
+
+        completion = client.chat.completions.create(
+          model=default_model,
+          messages=[
+            {"role": "system", "content": "The user has multiple chunks of summaries belonging to the same video, there might be overlaps, please combine the summaries into one, handle the overlapping parts appropriately."},
+            {"role": "user", "content": "{}".format(template_content + os.linesep.join(list_of_completions))}
+          ]
+        )
+        completion_text = completion.choices[0].message.content
+    else:
+        completion = client.chat.completions.create(
+          model=default_model,
+          messages=[
+            {"role": "system", "content": default_system_prompt },
+            {"role": "user", "content": "{}".format(template_content + transcription_content)}
+          ]
+        )
+        completion_text = completion.choices[0].message.content
 
     temp_filename = os.path.basename(transcription_file)
     completion_file_name = "./completion_{}_file.txt".format(temp_filename)
-    completion_text = completion.choices[0].message.content
     with open(completion_file_name, "w") as buffer:
         buffer.write(completion_text)
         buffer.close()
