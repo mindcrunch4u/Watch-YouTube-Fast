@@ -30,37 +30,31 @@ Configure your `template.txt` to suit your need, refer to the provided examples:
 
 **Turn a YouTube link into a TTS summary**
 ```
-python understand.py \ 
-    --template <path/to/template/file>
-    --full-procedure <link> \
-    --stage1-get-audio <remote|local> \
-    --stage2-get-transcription <remote|local> \
-    --stage3-get-completion <remote|local> \
-    --stage4-get-tts <remote|local>
+python understand.py -f -c <youtube video link>
+```
+By default, the script relies on online services. To use `whisper` locally for transcription, try:
+```
+python understand.py -f -c <youtube video link> -s2 local
 ```
 
 ***Single Steps**: perform each step manually*
 ```
-python understand.py --stage1-get-audio <remote|local> <link>
-python understand.py --stage2-get-transcription <remote|local> <path/to/audio/file>
-python understand.py --stage3-get-completion <remote|local> <path/to/transcription/file> --template <path/to/template/file>
-python understand.py --stage4-get-tts <remote|local> <path/to/completion/text>
+python understand.py --stage1-get-audio <remote|local>          -c <link>
+python understand.py --stage2-get-transcription <remote|local>  -c <path/to/audio/file>
+python understand.py --stage3-get-completion <remote|local>     -c <path/to/transcription/file>
+python understand.py --stage4-get-tts <remote|local>            -c <path/to/completion/text>
 ```
 
 ***Start From Stage 2**: assume you already have the audio file, and you want to complete the rest of the process:*
 ```
-python understand.py --start-from-stage2 \
-    --template <path/to/template/file>
-    --stage2-get-transcription <remote|local> <path/to/audio/file>
-    --stage3-get-completion <remote|local>\
-    --stage4-get-tts <remote|local>
+python understand.py --start-from-stage 2 -c <path/to/audio/file>
+```
+Or to generate transcription locally:
+```
+python understand.py --start-from-stage 2 -c <path/to/audio/file> -s2 local
 ```
 
 ***Start From Stage 3**: assume you already have the transcription file, and you want to complete the rest of the process:*
 ```
-python understand.py --start-from-stage3
-    --template <path/to/template/file>
-    --stage3-get-completion <remote|local> <path/to/transcription/file>
-    --stage3-get-completion <remote|local>\
-    --stage4-get-tts <remote|local>
+python understand.py --start-from-stage 3 -c <path/to/transcription/file>
 ```
