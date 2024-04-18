@@ -11,7 +11,6 @@ Set up the environment:
 python -m venv ./env
 source ./env/bin/activate
 ```
-Follow the [instructions here](https://github.com/openai/whisper) to install whisper (for local transcription).
 
 Configure the following fields in `configuration.py`:
 - `site_url`, this is for request headers. The script assumes the `downloader_endpoint` and `storage_endpoint` are using the same FQDN.
@@ -27,6 +26,12 @@ echo 'openai_key="<your openai key>"' >> private.py
 Configure your `template.txt` to suit your need, refer to the provided examples:
 - `template.txt`
 - `template_cn.txt`
+
+### Dependencies
+
+Follow the [instructions here](https://github.com/openai/whisper) to install whisper (for local transcription).
+
+What not integrate them (python-based tools) into my project: Because standalone tools can be easily updated, for example, tools like `yt-dlp` needs to be constantly updated.
 
 ### Trying it out
 
@@ -59,4 +64,20 @@ python understand.py --start-from-stage 2 -c <path/to/audio/file> -s2 local
 ***Start From Stage 3**: assume you already have the transcription file, and you want to complete the rest of the process:*
 ```
 python understand.py --start-from-stage 3 -c <path/to/transcription/file>
+```
+
+## More Use Cases
+
+### Combining Multiple Summaries
+
+This is handy when you are researching for a specific product, the idea is to:
+- Generate summaries for multiple videos (with good ratings).
+- Combine all the summaries into one.
+
+```
+echo "I am trying to <Your Goal>. The following are a few summaries of information that I collected, based on the following information, what do you think about <Your Goal>. What are the things that I need to know beforehand? Also provide me with pros and cons related to <Your Goal>, along with more details." >> template_temp.txt
+
+cat completion_* > all_completions.txt
+
+python understand.py -o -t template_temp.txt -s 3 -c all_completions.txt
 ```

@@ -27,13 +27,6 @@ Description:
         output: path to the TTS audio file.
 """
 
-proxy = default_config.proxy_url
-
-os.environ['http_proxy'] = proxy
-os.environ['HTTP_PROXY'] = proxy
-os.environ['https_proxy'] = proxy
-os.environ['HTTPS_PROXY'] = proxy
-
 def usage():
     print("python3 understand.py <template.txt> <transcription.txt | video link>")
 
