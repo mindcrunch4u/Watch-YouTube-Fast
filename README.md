@@ -29,9 +29,11 @@ Configure your `template.txt` to suit your need, refer to the provided examples:
 
 ### Dependencies
 
-Follow the [instructions here](https://github.com/openai/whisper) to install whisper (for local transcription).
+- Follow the [instructions here](https://github.com/openai/whisper?tab=readme-ov-file#setup) to install `whisper` (for local transcription).
+- Follow the [instructions here](https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#installation) to install `yt-dlp` (to fetch audio locally).
+- Install `curl`.
 
-What not integrate them (python-based tools) into my project: Because standalone tools can be easily updated, for example, tools like `yt-dlp` needs to be constantly updated.
+***Why not integrate them (python-based tools) into the project***: Because standalone tools can be easily updated or replaced, for example, tools like `yt-dlp` needs to be constantly updated (when the download fails).
 
 ### Trying it out
 
@@ -76,8 +78,6 @@ This is handy when you are researching for a specific product, the idea is to:
 
 ```
 echo "I am trying to <Your Goal>. The following are a few summaries of information that I collected, based on the following information, what do you think about <Your Goal>. What are the things that I need to know beforehand? Also provide me with pros and cons related to <Your Goal>, along with more details." >> template_temp.txt
-
 cat completion_* > all_completions.txt
-
 python understand.py -o -t template_temp.txt -s 3 -c all_completions.txt
 ```
