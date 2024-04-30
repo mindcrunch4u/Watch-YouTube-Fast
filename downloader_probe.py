@@ -162,24 +162,25 @@ def create_compatible_name(value, allow_unicode=True):
 
 
 def download_and_save(from_link, to_folder="./"):
-    unquoted_from_link = create_compatible_name(unquote(from_link).split("/")[-1]) # prevents linux-incompatible names
-    unquoted_from_link += ".mp3"
-    process = Popen(["/usr/bin/curl", "-s", from_link, "-o", unquoted_from_link ])
-    exitcode = process.wait()
-    if exitcode != 0:
-        return -1
+    with Spinner():
+        unquoted_from_link = create_compatible_name(unquote(from_link).split("/")[-1]) # prevents linux-incompatible names
+        unquoted_from_link += ".mp3"
+        process = Popen(["/usr/bin/curl", "-s", from_link, "-o", unquoted_from_link ])
+        exitcode = process.wait()
+        if exitcode != 0:
+            return -1
 
-    process = Popen(["/usr/bin/mkdir", "-p", to_folder])
-    exitcode = process.wait()
-    if exitcode != 0:
-        return -2
+        process = Popen(["/usr/bin/mkdir", "-p", to_folder])
+        exitcode = process.wait()
+        if exitcode != 0:
+            return -2
 
-    file_name = from_link.split("/")[-1]
-    target_file_name = "{}/{}".format(to_folder, unquoted_from_link)
-    process = Popen(["/usr/bin/mv", file_name, target_file_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    exitcode = process.wait()
+        file_name = from_link.split("/")[-1]
+        target_file_name = "{}/{}".format(to_folder, unquoted_from_link)
+        process = Popen(["/usr/bin/mv", file_name, target_file_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        exitcode = process.wait()
 
-    return os.path.normpath(target_file_name)
+        return os.path.normpath(target_file_name)
 
 
 if __name__ == "__main__":
