@@ -2,6 +2,9 @@ import sys
 import time
 import requests
 import subprocess
+import os
+import datetime
+import threading
 from subprocess import Popen, PIPE, STDOUT
 from urllib.parse import unquote
 from lxml import etree
@@ -10,6 +13,51 @@ from configuration import default_config
 
 import unicodedata # slugify
 import re # slugify
+
+class Spinner:
+    busy = False
+    delay = 0.5
+    enter_time = 0
+    is_terminated = False
+
+    @staticmethod
+    def spinning_cursor():
+        while 1: 
+            for cursor in '|/-\\': yield cursor
+
+    def __init__(self, delay=None):
+        self.spinner_generator = self.spinning_cursor()
+        if delay and float(delay): self.delay = delay
+
+    def spinner_task(self):
+        while self.busy:
+            time_elapse = datetime.datetime.now().replace(microsecond=0) - self.enter_time
+            time_elapse_string = "[{}] ".format(time_elapse)
+            print(time_elapse_string + next(self.spinner_generator), end='', flush=True)
+            time.sleep(self.delay)
+            print('\r', end='', flush=True)
+            self.is_terminated = True
+
+    def enter(self):
+        self.enter_time = datetime.datetime.now().replace(microsecond=0)
+        self.is_terminated = False
+        self.busy = True
+        threading.Thread(target=self.spinner_task).start()
+
+    def exit(self):
+        self.busy = False
+        time.sleep(self.delay)
+        while not self.is_terminated:
+            pass
+        print('\r' + ' '*60 + "\r", end="", flush=True)
+
+    def __enter__(self):
+        self.enter()
+
+    def __exit__(self, exception, value, tb):
+        self.exit()
+        if exception is not None:
+            return False
 
 headers = {
 "Host": default_config.site_url,
@@ -47,17 +95,25 @@ def get_link_from_result(result):
 
 def return_if_found(request_endpoint, is_debug=False):
     probe_delay = 5
+
+    if default_config.verbose:
+        print("Probing path: {}...".format(request_endpoint))
+    spinner = Spinner()
+    spinner.enter()
+
+    result = None
     while True:
         try:
             result = req_object().get(request_endpoint, verify=(not is_debug), headers=headers)
             if result.status_code == 200:
-                return result
-            else:
-                print("Probing path: {}...".format(request_endpoint))
+                break
         except Exception as e:
             print(e)
-            return None
+            sys.exit(1)
         time.sleep(probe_delay)
+
+    spinner.exit()
+    return result
 
 
 def probe_id(storage_endpoint, post_id, is_debug):
@@ -78,10 +134,14 @@ def probe_id(storage_endpoint, post_id, is_debug):
         res = requests.get(post_endpoint)
         link = get_link_from_result(res)
         link = "{}/{}/{}/{}".format(storage_endpoint, post_id, "datablock", link)
-        print("Download link found: {}".format(link))
+        if default_config.verbose:
+            print("Download link found: {}".format(link))
+        else:
+            print("Downloading audio...")
         return link
     else:
         return None
+
 
 def create_compatible_name(value, allow_unicode=True):
     """
@@ -119,7 +179,7 @@ def download_and_save(from_link, to_folder="./"):
     process = Popen(["/usr/bin/mv", file_name, target_file_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     exitcode = process.wait()
 
-    return target_file_name
+    return os.path.normpath(target_file_name)
 
 
 if __name__ == "__main__":
