@@ -17,9 +17,6 @@ if default_config.support_large_text:
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 # filter out OpenAI warning: "DeprecationWarning: Due to a bug, this method doesn't actually stream the response content, `.with_streaming_response.method()` should be used instead"
 
-base_url="https://hk.xty.app/v1"
-default_model = "gpt-3.5-turbo-0125"
-default_model = "gpt-3.5-turbo-instruct"
 
 """
 Description:
@@ -44,10 +41,10 @@ def usage():
 
 def create_client(openai_key):
     client = OpenAI(
-        base_url=base_url,
+        base_url=default_config.base_url,
         api_key=openai_key,
         http_client=httpx.Client(
-            base_url=base_url,
+            base_url=default_config.base_url,
             follow_redirects=True,
         ),
     )
@@ -76,7 +73,7 @@ def get_tts(text, audio_output_path):
 def get_completion_streamed(system_prompt, user_prompt):
     ret_string = ""
     completion = client.chat.completions.create(
-      model=default_model,
+      model=default_config.default_model,
       messages=[
         {"role": "system", "content": system_prompt },
         {"role": "user", "content": user_prompt}

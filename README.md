@@ -16,6 +16,7 @@ Configure the following fields in `configuration.py`:
 - `site_url`, this is for request headers. The script assumes the `downloader_endpoint` and `storage_endpoint` are using the same FQDN.
 - `downloader_endpoint`, set up a remote downloader using the [Web-Box](https://github.com/mindcrunch4u/Web-Box) project. Copy the server's endpoint here.
 - `storage_endpoint`, set up an `autoindex`-like, HTTP-based file server. Copy the server's root endpoint here.
+- `base_url` (optional, only required if you are using an API key from a reseller)
 
 Configure your OpenAI key (if you use the `remote` method):
 
@@ -82,3 +83,10 @@ echo "I am trying to <Your Goal>. The following are a few summaries of informati
 cat completion_* > all_completions.txt
 python understand.py -o -t template_temp.txt -s 3 -c all_completions.txt
 ```
+
+## Troubleshooting 
+
+If you are also a cheapskate like me, and bought your keys from resellers, then you will very likely encounter all sorts of weird issues.
+
+Take a look at [one-api](https://github.com/songquanpeng/one-api), which many resellers use. You might find the same error code that you are having, along with solutions.
+

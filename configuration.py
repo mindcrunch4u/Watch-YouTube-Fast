@@ -14,6 +14,9 @@ default_config.no_audio = False # generate TTS for the summary or not
 default_config.support_large_text = False
 default_config.transcription_format = "json" # text, srt, ... use `json` if your API reseller uses a poorly-implemented API proxy server
 default_config.large_file_chunk_size = 2000
+default_config.base_url="https://hk.xty.app/v1"
+default_config.default_model = "gpt-3.5-turbo-0125"
+default_config.default_model = "gpt-3.5-turbo-instruct"
 
 import os
 proxy = default_config.proxy_url
