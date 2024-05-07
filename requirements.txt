@@ -4,3 +4,5 @@ openai
 Requests
 tabulate
 validators
+langchain-text-splitters
+tiktoken

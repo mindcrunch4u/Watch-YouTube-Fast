@@ -185,7 +185,7 @@ def get_transcription(audio_file_path):
             if default_config.verbose:
                 print(response_text)
             f.write(response_text)
-    print("[*] Transcription saved to: {}.".format(transcription_file))
+    print("[*] Transcription saved to: {}.".format(output_transcription_file_name))
     return output_transcription_file_name
 
 
