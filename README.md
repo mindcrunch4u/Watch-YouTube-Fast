@@ -34,6 +34,7 @@ Configure your `template.txt` to suit your need, refer to the provided examples:
 - Follow the [instructions here](https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#installation) to install `yt-dlp` (to fetch audio locally).
 - Install `curl`.
 - Install `pip install langchain-text-splitters tiktoken` to support large text. [Source.](https://python.langchain.com/docs/modules/data_connection/document_transformers/split_by_token/)
+- Install `ffmpeg` to support splitting audio by splitting audio by seconds.
 
 ***Why not integrate them (python-based tools) into the project***: Because standalone tools can be easily updated or replaced, for example, tools like `yt-dlp` needs to be constantly updated (when the download fails).
 

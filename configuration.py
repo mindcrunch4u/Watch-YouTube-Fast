@@ -10,10 +10,11 @@ default_config.downloader_endpoint = "<web-box downloader API>"
 default_config.storage_endpoint = "<nginx autoindex URL>"
 
 default_config.verbose = False
-default_config.no_audio = False # generate TTS for the summary or not
-default_config.support_large_text = False
-default_config.transcription_format = "json" # text, srt, ... use `json` if your API reseller uses a poorly-implemented API proxy server
-default_config.large_file_chunk_size = 2000
+default_config.no_audio = True # generate TTS for the summary or not
+default_config.support_large_text = True
+default_config.split_audio_by_time = 60*15 # <=0 disable splitting, >0 split by seconds, 60*15 split every 15 minutes
+default_config.transcription_format = "text" # text, srt, ... use `json` if your API reseller uses a poorly-implemented API proxy server
+default_config.large_file_chunk_size = 3000
 default_config.base_url="https://hk.xty.app/v1"
 default_config.default_model = "gpt-3.5-turbo-0125"
 default_config.default_model = "gpt-3.5-turbo-instruct"

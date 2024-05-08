@@ -11,6 +11,7 @@ from get_audio import get_audio_to_path
 from configuration import default_config
 from arguments_parsing import user_args
 from downloader_probe import Spinner
+from split_audio import split_audio_by_seconds
 
 if default_config.support_large_text:
     from largetext import large_text_to_list, default_chunk_size
@@ -84,7 +85,10 @@ def get_completion_streamed(system_prompt, user_prompt):
     )
     try:
         for response in completion:
-            ret_string += response.choices[0].text
+            if hasattr(response.choices[0], "text"):
+                ret_string += response.choices[0].text
+            else:
+                response.choices[0].message.content
     except Exception as e:
         print(e)
         print(response)
@@ -146,50 +150,102 @@ def get_transcription(audio_file_path):
         transcription_suffix = default_config.transcription_format
 
     output_transcription_file_name = Path(audio_file_path).stem + ".{}".format(transcription_suffix)
+    file_stats = os.stat(audio_file_path)
+    audio_file_size_in_mb = file_stats.st_size / (1024 * 1024)
 
     if user_args.get_transcription_from == "local":
-        arguments = ["whisper", audio_file_path, "--output_format", transcription_suffix, "--output_dir", "./"]
-        print("[*] {}".format(" ".join(arguments)))
-        process = Popen(arguments , stdout=PIPE, stderr=STDOUT, shell=False)
-        if default_config.verbose:
-            with process.stdout:
-                for line in iter(process.stdout.readline, b''): # b'\n'-separated lines
-                    try:
-                        decoded_line = line.decode()
-                    except:
-                        decoded_line = str(line)
-                    print(decoded_line.strip(), flush=True)
-        exitcode = process.wait()
-        print("[*] Transcription exit status: {}".format(exitcode))
+        split_names = None
+        if audio_file_size_in_mb > 70:
+            if default_config.split_audio_by_time > 0:
+                split_names = split_audio_by_seconds(audio_file_path, default_config.split_audio_by_time)
+            else:
+                print("[!] The audio is way too big, whisper might get stuck. Please enable audio splitting.")
+                print("[!] Abort.")
+                sys.exit(1)
+        if split_names != None:
+            for split_audio in split_names:
+                split_output_transcription_file_name = Path(split_audio).stem + ".{}".format(transcription_suffix)
+                arguments = ["whisper", split_audio, "--output_format", transcription_suffix, "--output_dir", "./"]
+                print("[*] {}".format(" ".join(arguments)))
+                process = Popen(arguments , stdout=PIPE, stderr=STDOUT, shell=False)
+                if default_config.verbose:
+                    with process.stdout:
+                        for line in iter(process.stdout.readline, b''): # b'\n'-separated lines
+                            try:
+                                decoded_line = line.decode()
+                            except:
+                                decoded_line = str(line)
+                            print(decoded_line.strip(), flush=True)
+                exitcode = process.wait()
+                split_content = ""
+                with open(split_output_transcription_file_name, "r") as f:
+                    split_content = f.read()
+                with open(output_transcription_file_name, "a+") as f:
+                    f.write(split_content)
+                print("[*] Transcription exit status: {}, append to {}".format(exitcode, output_transcription_file_name))
+        else:
+            arguments = ["whisper", audio_file_path, "--output_format", transcription_suffix, "--output_dir", "./"]
+            print("[*] {}".format(" ".join(arguments)))
+            process = Popen(arguments , stdout=PIPE, stderr=STDOUT, shell=False)
+            if default_config.verbose:
+                with process.stdout:
+                    for line in iter(process.stdout.readline, b''): # b'\n'-separated lines
+                        try:
+                            decoded_line = line.decode()
+                        except:
+                            decoded_line = str(line)
+                        print(decoded_line.strip(), flush=True)
+            exitcode = process.wait()
+            print("[*] Transcription exit status: {}".format(exitcode))
     else:
         # get transcription from remote
-        file_stats = os.stat(audio_file_path)
-        audio_file_size_in_mb = file_stats.st_size / (1024 * 1024)
+        split_names = None
         if audio_file_size_in_mb > 20:
-            print("[!] Sending a audio file larger than 20MB might fail. Use local transcription instead.")
-            print("[!] Abort.")
-            sys.exit(1)
-        print("[*] Getting transcription from remote...")
+            if default_config.split_audio_by_time > 0:
+                split_names = split_audio_by_seconds(audio_file_path, default_config.split_audio_by_time)
+            else:
+                print("[!] Sending a audio file larger than 20MB might fail. Use local transcription instead.")
+                print("[!] Abort.")
+                sys.exit(1)
 
         spinner = Spinner()
         spinner.enter()
-        audio_file= open(audio_file_path, "rb")
-        transcription = client.audio.transcriptions.create(
-          file=audio_file,
-          model="whisper-1",
-          response_format=default_config.transcription_format
-        )
+        if split_names != None:
+            print("[*] Getting splitted transcriptions from remote...")
+            for split_audio in split_names:
+                print("\tprocessing {}".format(split_audio))
+                audio_file= open(os.path.normpath(split_audio), "rb")
+                transcription = client.audio.transcriptions.create(
+                  file=audio_file,
+                  model="whisper-1",
+                  response_format=default_config.transcription_format
+                )
+                with open(output_transcription_file_name, "a+") as f:
+                    response_text = transcription.text
+                    if default_config.verbose:
+                        print(response_text)
+                    f.write(response_text)
+        else:
+            print("[*] Getting transcription from remote...")
+            audio_file= open(audio_file_path, "rb")
+            transcription = client.audio.transcriptions.create(
+              file=audio_file,
+              model="whisper-1",
+              response_format=default_config.transcription_format
+            )
+            with open(output_transcription_file_name, "w") as f:
+                response_text = transcription.text
+                if default_config.verbose:
+                    print(response_text)
+                f.write(response_text)
         spinner.exit()
-        with open(output_transcription_file_name, "w") as f:
-            response_text = transcription.text
-            if default_config.verbose:
-                print(response_text)
-            f.write(response_text)
     print("[*] Transcription saved to: {}.".format(output_transcription_file_name))
     return output_transcription_file_name
 
 
 if __name__ == "__main__":
+
+    transcription_file = None
 
     if (user_args.is_full_procedure or
         (user_args.start_from_stage == 1 and not user_args.is_single_command)):
