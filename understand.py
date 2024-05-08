@@ -75,6 +75,7 @@ def get_tts(text, audio_output_path):
 
 def get_completion_streamed(system_prompt, user_prompt):
     ret_string = ""
+    is_need_retry = False
     completion = client.chat.completions.create(
       model=default_config.default_model,
       messages=[
@@ -88,12 +89,12 @@ def get_completion_streamed(system_prompt, user_prompt):
             if hasattr(response.choices[0], "text"):
                 ret_string += response.choices[0].text
             else:
-                response.choices[0].message.content
+                ret_string += response.choices[0].message.content
     except Exception as e:
         print(e)
         print(response)
-        sys.exit(1)
-    return ret_string
+        is_need_retry = True
+    return ret_string, is_need_retry
 
 
 def get_completion(template_file, transcription_file):
@@ -120,14 +121,24 @@ def get_completion(template_file, transcription_file):
         for text_chunk in list_of_texts:
             print("[*] handling chunk: {}".format(chunk_index))
             chunk_index += 1
-            completion_text = get_completion_streamed(default_system_prompt, "{}".format(template_content + text_chunk))
+            is_need_retry = True
+            completion_text = ""
+            while is_need_retry:
+                completion_text, is_need_retry = get_completion_streamed(default_system_prompt, "{}".format(template_content + text_chunk))
             list_of_completions.append(completion_text)
 
         summary_system_prompt = "The user has multiple chunks of summaries belonging to the same video, there might be overlaps, please combine the summaries into one, handle the overlapping parts appropriately."
         summary_user_prompt = "{}".format(template_content + os.linesep.join(list_of_completions)) 
-        completion_text = get_completion_streamed(summary_system_prompt, summary_user_prompt)
+
+        is_need_retry = True
+        completion_text = ""
+        while is_need_retry:
+            completion_text, is_need_retry = get_completion_streamed(summary_system_prompt, summary_user_prompt)
     else:
-        completion_text = get_completion_streamed(default_system_prompt, "{}".format(template_content + transcription_content))
+        is_need_retry = True
+        completion_text = ""
+        while is_need_retry:
+            completion_text, is_need_retry = get_completion_streamed(default_system_prompt, "{}".format(template_content + transcription_content))
 
     spinner.exit()
 
@@ -150,6 +161,9 @@ def get_transcription(audio_file_path):
         transcription_suffix = default_config.transcription_format
 
     output_transcription_file_name = Path(audio_file_path).stem + ".{}".format(transcription_suffix)
+    with open(output_transcription_file_name, "w") as f:
+        # empty a file if it exists already
+        pass
     file_stats = os.stat(audio_file_path)
     audio_file_size_in_mb = file_stats.st_size / (1024 * 1024)
 
