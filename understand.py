@@ -11,7 +11,7 @@ from get_audio import get_audio_to_path
 from configuration import default_config
 from arguments_parsing import user_args
 from downloader_probe import Spinner
-from split_audio import split_audio_by_seconds
+from audio_splitter import split_audio_by_seconds
 
 if default_config.support_large_text:
     from largetext import large_text_to_list, default_chunk_size
